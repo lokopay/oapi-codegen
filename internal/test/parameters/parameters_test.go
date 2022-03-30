@@ -16,14 +16,16 @@ import (
 )
 
 type testServer struct {
-	array         []int32
-	object        *Object
-	complexObject *ComplexObject
-	passThrough   *string
-	primitive     *int32
-	cookieParams  *GetCookieParams
-	queryParams   *GetQueryFormParams
-	headerParams  *GetHeaderParams
+	array           []int32
+	object          *Object
+	complexObject   *ComplexObject
+	passThrough     *string
+	n1param         *string
+	primitive       *int32
+	primitiveString *string
+	cookieParams    *GetCookieParams
+	queryParams     *GetQueryFormParams
+	headerParams    *GetHeaderParams
 }
 
 func (t *testServer) reset() {
@@ -31,7 +33,9 @@ func (t *testServer) reset() {
 	t.object = nil
 	t.complexObject = nil
 	t.passThrough = nil
+	t.n1param = nil
 	t.primitive = nil
+	t.primitiveString = nil
 	t.cookieParams = nil
 	t.queryParams = nil
 	t.headerParams = nil
@@ -121,6 +125,12 @@ func (t *testServer) GetPassThrough(ctx echo.Context, param string) error {
 	return nil
 }
 
+//  (GET /startingWithjNumber/{param})
+func (t *testServer) GetStartingWithNumber(ctx echo.Context, n1param string) error {
+	t.n1param = &n1param
+	return nil
+}
+
 // (GET /queryDeepObject)
 func (t *testServer) GetDeepObject(ctx echo.Context, params GetDeepObjectParams) error {
 	t.complexObject = &params.DeepObj
@@ -151,11 +161,17 @@ func (t *testServer) GetQueryForm(ctx echo.Context, params GetQueryFormParams) e
 	if params.P != nil {
 		t.primitive = params.P
 	}
+	if params.Ps != nil {
+		t.primitiveString = params.Ps
+	}
 	if params.Ep != nil {
 		t.primitive = params.Ep
 	}
 	if params.Co != nil {
 		t.complexObject = params.Co
+	}
+	if params.N1s != nil {
+		t.n1param = params.N1s
 	}
 	return nil
 }
@@ -184,6 +200,9 @@ func (t *testServer) GetHeader(ctx echo.Context, params GetHeaderParams) error {
 	if params.XComplexObject != nil {
 		t.complexObject = params.XComplexObject
 	}
+	if params.N1StartingWithNumber != nil {
+		t.n1param = params.N1StartingWithNumber
+	}
 	return nil
 }
 
@@ -211,6 +230,9 @@ func (t *testServer) GetCookie(ctx echo.Context, params GetCookieParams) error {
 	if params.Co != nil {
 		t.complexObject = params.Co
 	}
+	if params.N1s != nil {
+		t.n1param = params.N1s
+	}
 	return nil
 }
 
@@ -234,6 +256,10 @@ func TestParameterBinding(t *testing.T) {
 	expectedArray := []int32{3, 4, 5}
 
 	var expectedPrimitive int32 = 5
+
+	var expectedPrimitiveString string = "123;456"
+
+	var expectedN1Param string = "foo"
 
 	// Check the passthrough case
 	//  (GET /passThrough/{param})
@@ -333,6 +359,12 @@ func TestParameterBinding(t *testing.T) {
 	assert.EqualValues(t, &expectedPrimitive, ts.primitive)
 	ts.reset()
 
+	//  (GET /startingWithNumber/{1param})
+	result = testutil.NewRequest().Get("/startingWithNumber/foo").Go(t, e)
+	assert.Equal(t, http.StatusOK, result.Code())
+	assert.EqualValues(t, &expectedN1Param, ts.n1param)
+	ts.reset()
+
 	// ---------------------- Test Form Query Parameters ----------------------
 	//  (GET /queryForm)
 
@@ -372,11 +404,23 @@ func TestParameterBinding(t *testing.T) {
 	assert.EqualValues(t, &expectedPrimitive, ts.primitive)
 	ts.reset()
 
+	// primitive string within reserved char, i.e., ';' escaped to '%3B'
+	result = testutil.NewRequest().Get("/queryForm?ps=123%3B456").Go(t, e)
+	assert.Equal(t, http.StatusOK, result.Code())
+	assert.EqualValues(t, &expectedPrimitiveString, ts.primitiveString)
+	ts.reset()
+
 	// complex object
 	q = fmt.Sprintf("/queryForm?co=%s", string(marshaledComplexObject))
 	result = testutil.NewRequest().Get(q).Go(t, e)
 	assert.Equal(t, http.StatusOK, result.Code())
 	assert.EqualValues(t, &expectedComplexObject, ts.complexObject)
+	ts.reset()
+
+	// starting with number
+	result = testutil.NewRequest().Get("/queryForm?1s=foo").Go(t, e)
+	assert.Equal(t, http.StatusOK, result.Code())
+	assert.EqualValues(t, &expectedN1Param, ts.n1param)
 	ts.reset()
 
 	// complex object via deepObject
@@ -434,6 +478,13 @@ func TestParameterBinding(t *testing.T) {
 	assert.EqualValues(t, &expectedComplexObject, ts.complexObject)
 	ts.reset()
 
+	// starting with number
+	result = testutil.NewRequest().WithHeader("1-Starting-With-Number",
+		"foo").Get("/header").Go(t, e)
+	assert.Equal(t, http.StatusOK, result.Code())
+	assert.EqualValues(t, &expectedN1Param, ts.n1param)
+	ts.reset()
+
 	// ------------------------- Test Cookie Parameters ------------------------
 	result = testutil.NewRequest().WithCookieNameValue("p", "5").Get("/cookie").Go(t, e)
 	assert.Equal(t, http.StatusOK, result.Code())
@@ -454,6 +505,11 @@ func TestParameterBinding(t *testing.T) {
 		"o", "role,admin,firstName,Alex").Get("/cookie").Go(t, e)
 	assert.Equal(t, http.StatusOK, result.Code())
 	assert.EqualValues(t, &expectedObject, ts.object)
+	ts.reset()
+
+	result = testutil.NewRequest().WithCookieNameValue("1s", "foo").Get("/cookie").Go(t, e)
+	assert.Equal(t, http.StatusOK, result.Code())
+	assert.EqualValues(t, &expectedN1Param, ts.n1param)
 	ts.reset()
 }
 
@@ -491,6 +547,13 @@ func TestClientPathParams(t *testing.T) {
 	doRequest(t, e, http.StatusOK, req)
 	require.NotNil(t, ts.passThrough)
 	assert.Equal(t, "some string", *ts.passThrough)
+	ts.reset()
+
+	req, err = NewGetStartingWithNumberRequest(server, "some string")
+	assert.NoError(t, err)
+	doRequest(t, e, http.StatusOK, req)
+	require.NotNil(t, ts.n1param)
+	assert.Equal(t, "some string", *ts.n1param)
 	ts.reset()
 
 	req, err = NewGetContentObjectRequest(server, expectedComplexObject)
@@ -608,16 +671,21 @@ func TestClientQueryParams(t *testing.T) {
 
 	var expectedPrimitive1 int32 = 5
 	var expectedPrimitive2 int32 = 100
+	var expectedPrimitiveString string = "123;456"
+
+	var expectedStartingWithNumber string = "111"
 
 	// Check query params
 	qParams := GetQueryFormParams{
-		Ea: &expectedArray1,
-		A:  &expectedArray2,
-		Eo: &expectedObject1,
-		O:  &expectedObject2,
-		Ep: &expectedPrimitive1,
-		P:  &expectedPrimitive2,
-		Co: &expectedComplexObject,
+		Ea:  &expectedArray1,
+		A:   &expectedArray2,
+		Eo:  &expectedObject1,
+		O:   &expectedObject2,
+		Ep:  &expectedPrimitive1,
+		P:   &expectedPrimitive2,
+		Ps:  &expectedPrimitiveString,
+		Co:  &expectedComplexObject,
+		N1s: &expectedStartingWithNumber,
 	}
 
 	req, err := NewGetQueryFormRequest(server, &qParams)
@@ -629,13 +697,14 @@ func TestClientQueryParams(t *testing.T) {
 
 	// Check cookie params
 	cParams := GetCookieParams{
-		Ea: &expectedArray1,
-		A:  &expectedArray2,
-		Eo: &expectedObject1,
-		O:  &expectedObject2,
-		Ep: &expectedPrimitive1,
-		P:  &expectedPrimitive2,
-		Co: &expectedComplexObject,
+		Ea:  &expectedArray1,
+		A:   &expectedArray2,
+		Eo:  &expectedObject1,
+		O:   &expectedObject2,
+		Ep:  &expectedPrimitive1,
+		P:   &expectedPrimitive2,
+		Co:  &expectedComplexObject,
+		N1s: &expectedStartingWithNumber,
 	}
 	req, err = NewGetCookieRequest(server, &cParams)
 	assert.NoError(t, err)
@@ -646,13 +715,14 @@ func TestClientQueryParams(t *testing.T) {
 
 	// Check Header parameters
 	hParams := GetHeaderParams{
-		XArrayExploded:     &expectedArray1,
-		XArray:             &expectedArray2,
-		XObjectExploded:    &expectedObject1,
-		XObject:            &expectedObject2,
-		XPrimitiveExploded: &expectedPrimitive1,
-		XPrimitive:         &expectedPrimitive2,
-		XComplexObject:     &expectedComplexObject,
+		XArrayExploded:       &expectedArray1,
+		XArray:               &expectedArray2,
+		XObjectExploded:      &expectedObject1,
+		XObject:              &expectedObject2,
+		XPrimitiveExploded:   &expectedPrimitive1,
+		XPrimitive:           &expectedPrimitive2,
+		XComplexObject:       &expectedComplexObject,
+		N1StartingWithNumber: &expectedStartingWithNumber,
 	}
 	req, err = NewGetHeaderRequest(server, &hParams)
 	assert.NoError(t, err)

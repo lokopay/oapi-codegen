@@ -2,25 +2,24 @@ module github.com/lokopay/oapi-codegen
 
 require (
 	github.com/cyberdelia/templates v0.0.0-20141128023046-ca7fffd4298c
-	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/getkin/kin-openapi v0.26.0
-	github.com/go-chi/chi v4.0.2+incompatible
+	github.com/getkin/kin-openapi v0.87.0
+	github.com/gin-gonic/gin v1.7.4
+	github.com/go-chi/chi/v5 v5.0.0
+	github.com/go-playground/validator/v10 v10.9.0 // indirect
+	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/golangci/lint-1 v0.0.0-20181222135242-d2cdd8c08219
-	github.com/kr/pretty v0.1.0 // indirect
-	github.com/labstack/echo/v4 v4.1.11
+	github.com/json-iterator/go v1.1.12 // indirect
+	github.com/labstack/echo/v4 v4.6.3
+	github.com/lestrrat-go/jwx v1.2.7
 	github.com/matryer/moq v0.0.0-20190312154309-6cfb0558e1bd
-	github.com/mattn/go-colorable v0.1.4 // indirect
-	github.com/mattn/go-isatty v0.0.10 // indirect
-	github.com/pkg/errors v0.8.1
-	github.com/stretchr/testify v1.5.1
-	github.com/valyala/fasttemplate v1.1.0 // indirect
-	golang.org/x/crypto v0.0.0-20191112222119-e1110fd1c708 // indirect
-	golang.org/x/net v0.0.0-20191112182307-2180aed22343 // indirect
-	golang.org/x/sys v0.0.0-20191115151921-52ab43148777 // indirect
-	golang.org/x/text v0.3.2 // indirect
-	golang.org/x/tools v0.0.0-20191125144606-a911d9008d1f
-	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
-	gopkg.in/yaml.v2 v2.3.0
+	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
+	github.com/stretchr/testify v1.7.0
+	github.com/ugorji/go v1.2.6 // indirect
+	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
+	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba // indirect
+	golang.org/x/tools v0.0.0-20210114065538-d78b04bdf963
+	google.golang.org/protobuf v1.27.1 // indirect
+	gopkg.in/yaml.v2 v2.4.0
 )
 
-go 1.13
+go 1.16

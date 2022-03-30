@@ -247,6 +247,20 @@ paths:
       responses:
         '200':
           $ref: "#/components/responses/SimpleResponse"
+  /startingWithNumber/{1param}:
+    get:
+      operationId: getStartingWithNumber
+      parameters:
+        - name: 1param
+          in: path
+          required: true
+          content:
+            text/plain:
+              schema:
+                type: string
+      responses:
+        '200':
+          $ref: "#/components/responses/SimpleResponse"
   /queryForm:
     get:
       operationId: getQueryForm
@@ -303,6 +317,12 @@ paths:
           schema:
             type: integer
             format: int32
+        - name: ps
+          description: primitive string
+          in: query
+          required: false
+          schema:
+            type: string
         - name: co
           description: complex object
           in: query
@@ -311,6 +331,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ComplexObject"
+        - name: 1s
+          description: name starting with number
+          in: query
+          required: false
+          schema:
+            type: string
       responses:
         '200':
           $ref: "#/components/responses/SimpleResponse"
@@ -388,6 +414,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ComplexObject"
+        - name: 1-Starting-With-Number
+          description: name starting with number
+          in: header
+          required: false
+          schema:
+            type: string
   /cookie:
     get:
       operationId: getCookie
@@ -450,6 +482,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ComplexObject"
+        - name: 1s
+          description: name starting with number
+          in: cookie
+          required: false
+          schema:
+            type: string
 components:
   schemas:
     Object:

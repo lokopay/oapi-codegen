@@ -20,6 +20,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 
 	"gopkg.in/yaml.v2"
@@ -43,6 +44,8 @@ var (
 	flagImportMapping  string
 	flagExcludeSchemas string
 	flagConfigFile     string
+	flagAliasTypes     bool
+	flagPrintVersion   bool
 )
 
 type configuration struct {
@@ -60,7 +63,7 @@ func main() {
 
 	flag.StringVar(&flagPackageName, "package", "", "The package name for generated code")
 	flag.StringVar(&flagGenerate, "generate", "types,client,server,spec",
-		`Comma-separated list of code to generate; valid options: "types", "client", "chi-server", "server", "spec", "skip-fmt", "skip-prune"`)
+		`Comma-separated list of code to generate; valid options: "types", "client", "chi-server", "server", "gin", "spec", "skip-fmt", "skip-prune"`)
 	flag.StringVar(&flagOutputFile, "o", "", "Where to output generated code, stdout is default")
 	flag.StringVar(&flagIncludeTags, "include-tags", "", "Only include operations with the given tags. Comma-separated list of tags.")
 	flag.StringVar(&flagExcludeTags, "exclude-tags", "", "Exclude operations that are tagged with the given tags. Comma-separated list of tags.")
@@ -68,7 +71,20 @@ func main() {
 	flag.StringVar(&flagImportMapping, "import-mapping", "", "A dict from the external reference to golang package path")
 	flag.StringVar(&flagExcludeSchemas, "exclude-schemas", "", "A comma separated list of schemas which must be excluded from generation")
 	flag.StringVar(&flagConfigFile, "config", "", "a YAML config file that controls oapi-codegen behavior")
+	flag.BoolVar(&flagAliasTypes, "alias-types", false, "Alias type declarations of possible")
+	flag.BoolVar(&flagPrintVersion, "version", false, "when specified, print version and exit")
 	flag.Parse()
+
+	if flagPrintVersion {
+		bi, ok := debug.ReadBuildInfo()
+		if !ok {
+			fmt.Fprintln(os.Stderr, "error reading build info")
+			os.Exit(1)
+		}
+		fmt.Println(bi.Main.Path + "/cmd/oapi-codegen")
+		fmt.Println(bi.Main.Version)
+		return
+	}
 
 	if flag.NArg() < 1 {
 		fmt.Println("Please specify a path to a OpenAPI 3.0 spec file")
@@ -87,7 +103,9 @@ func main() {
 		cfg.PackageName = codegen.ToCamelCase(nameParts[0])
 	}
 
-	opts := codegen.Options{}
+	opts := codegen.Options{
+		AliasTypes: flagAliasTypes,
+	}
 	for _, g := range cfg.GenerateTargets {
 		switch g {
 		case "client":
@@ -96,6 +114,8 @@ func main() {
 			opts.GenerateChiServer = true
 		case "server":
 			opts.GenerateEchoServer = true
+		case "gin":
+			opts.GenerateGinServer = true
 		case "types":
 			opts.GenerateTypes = true
 		case "spec":
@@ -121,7 +141,7 @@ func main() {
 
 	swagger, err := util.LoadSwagger(flag.Arg(0))
 	if err != nil {
-		errExit("error loading swagger spec\n: %s", err)
+		errExit("error loading swagger spec in %s\n: %s", flag.Arg(0), err)
 	}
 
 	templates, err := loadTemplateOverrides(cfg.TemplatesDir)
